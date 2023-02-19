@@ -7,24 +7,28 @@ from django.contrib.auth.models import BaseUserManager
 class UserProfileManager(BaseUserManager):
     """Manager for UserProfiles"""
 
-    def create_user(self, email, name, password=None):
+    def create_superuser(self, email, name, password, **other_fields):
         """Create a new user profile"""
+        other_fields.setdefault('is_staff', True)
+        other_fields.setdefault('is_superuser', True)
+        other_fields.setdefault('is_active', True)
+
+        if other_fields.get('is_staff') is not True:
+            raise ValueError(
+                'Superuser must be assigned to is_staff=True.')
+        if other_fields.get('is_superuser') is not True:
+            raise ValueError(
+                'Superuser must be assigned to is_superuser=True.')
+        return self.create_user(email, name, password, **other_fields)
+
+    def create_user(self, email, name, password, **other_fields):
         if not email:
-            raise ValueError('User musth have an email address')
+            raise ValueError('User must have an email address')
 
         email = self.normalize_email(email)
-        user = self.model(email=email, name=name)
+        user = self.model(email=email, name=name, **other_fields)
 
         user.set_password(password)
-        user.save(using=self._db)
-
-        return user
-
-    def create_superuser(self, email, name, password):
-        """Create and save a new superuser with given details"""
-        user = self.create_user(email, name, password)
-        user.is_superuser = True
-        user.is_staff = True
         user.save(using=self._db)
 
         return user
@@ -38,8 +42,8 @@ class UserProfile(AbstractUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
 
     objects = UserProfileManager()
-    username_field = "email"
-    REQUIRED_FIELDS = ['name']
+    username_field = 'email'
+    REQUIRED_FIELDS = ['name', 'email']
 
     def get_full_name(self):
         """Retrieve full name of the user"""
